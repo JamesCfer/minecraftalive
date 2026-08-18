@@ -1,0 +1,20 @@
+{
+  "name": "minecraftalive-gm",
+  "version": "0.1.0",
+  "description": "Always-on autonomous game master for MinecraftAlive",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node index.mjs",
+    "test": "node test/smoke.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.234"
+  },
+  "devDependencies": {
+    "ws": "^8.18.0"
+  }
+}

@@ -96,6 +96,17 @@ World time: 0 = dawn, 6000 = noon, 12000 ≈ dusk, 18000 = midnight.
 ]
 ```
 
+## Autonomous game master (`gm/`)
+
+`mcp/` is for a human driving Claude interactively. `gm/` is a separate,
+always-on service that keeps the world reactive when nobody is running a
+Claude Code session: it listens for pushed events from the plugin bridge
+(joins, chat, NPC interactions, deaths), debounces bursts into a single
+agent turn, and reacts through the very same `mcp/server.mjs` tools — with
+a tool deny-list, daily token budget, rate limit, and kill switch since it
+runs unattended. See [`gm/README.md`](gm/README.md) for setup, guardrails,
+dry-run testing, and how to edit its lore.
+
 ## Building from source
 
 Requires JDK 21+ and Maven:

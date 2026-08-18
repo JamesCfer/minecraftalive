@@ -1,3 +1,6 @@
 plugin/target/
 mcp/node_modules/
+gm/node_modules/
+gm/state/
+gm/DISABLED
 *.log
