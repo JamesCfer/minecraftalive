@@ -1,0 +1,3 @@
+plugin/target/
+mcp/node_modules/
+*.log

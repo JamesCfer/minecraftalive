@@ -1,0 +1,13 @@
+{
+  "name": "minecraftalive-mcp",
+  "version": "0.1.0",
+  "description": "MCP bridge that lets Claude game-master a Minecraft server running the MinecraftAlive plugin",
+  "type": "module",
+  "main": "server.mjs",
+  "bin": { "minecraftalive-mcp": "server.mjs" },
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  }
+}

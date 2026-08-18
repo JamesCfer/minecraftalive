@@ -1,0 +1,22 @@
+# MinecraftAlive configuration
+bridge:
+  # WebSocket bind address. Keep 127.0.0.1 unless the MCP bridge runs on another machine.
+  host: 127.0.0.1
+  port: 8765
+  # Auth token the MCP bridge must present. CHANGE THIS.
+  token: change-me
+
+# Self-update from GitHub Releases: on startup, a newer release jar is downloaded
+# into plugins/update/ and applied automatically on the NEXT server restart.
+auto-update:
+  enabled: true
+  github-repo: JamesCfer/minecraftalive
+
+# Allow Claude to run arbitrary console commands via the run_command tool.
+allow-console-commands: false
+
+# Radius in blocks that NPC speech is heard by players.
+npc-chat-radius: 20.0
+
+# Max blocks a single fill_region call may change.
+max-fill-volume: 100000
