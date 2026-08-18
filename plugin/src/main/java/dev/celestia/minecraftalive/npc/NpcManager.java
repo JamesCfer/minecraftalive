@@ -6,11 +6,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.celestia.minecraftalive.MinecraftAlivePlugin;
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -20,6 +23,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Villager;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
@@ -171,8 +175,41 @@ public class NpcManager {
         return spawn(data, loc.clone());
     }
 
+    /** Permanently kill an NPC: it will never be auto-respawned again until revive() is called. */
+    public void markDead(NpcData data) {
+        data.dead = true;
+        data.diedAt = java.time.Instant.now().toString();
+        cancelWalk(data.id);
+        data.entityUuid = null;
+        save();
+    }
+
+    /** Bring a previously dead NPC back, spawning a fresh entity at the given location. */
+    public void revive(NpcData data, Location at) {
+        data.dead = false;
+        data.diedAt = null;
+        spawn(data, at);
+        save();
+    }
+
+    /** A player head representing this NPC, wearing their skin if known. Suitable as a memorial drop. */
+    public ItemStack headOf(NpcData data) {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        Component name = Component.text(data.name, NamedTextColor.GOLD).decoration(TextDecoration.ITALIC, false);
+        Component lore = Component.text("In memoriam.", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false);
+        if (data.skin != null) {
+            item.setData(DataComponentTypes.PROFILE, ResolvableProfile.resolvableProfile().name(data.skin).build());
+        }
+        item.editMeta(meta -> {
+            meta.displayName(name);
+            meta.lore(List.of(lore));
+        });
+        return item;
+    }
+
     /** The live entity backing an NPC, respawning it if it is truly gone. Null if unresolvable. */
     public Entity resolveEntity(NpcData data) {
+        if (data.dead) return null;
         if (data.entityUuid != null) {
             Entity e = Bukkit.getEntity(data.entityUuid);
             if (e != null && e.isValid()) return e;

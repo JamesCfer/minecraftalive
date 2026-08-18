@@ -53,6 +53,10 @@ public class NpcData {
     public List<ScheduleEntry> schedule = new ArrayList<>();
     public transient long manualOverrideUntilMs = 0;
     public transient long lastRespawnMs = 0;
+    /** Once true, the NPC has permanently died and must never be auto-respawned. */
+    public boolean dead = false;
+    /** ISO-8601 timestamp of death, or null if alive. */
+    public String diedAt;
 
     /** Schedule entry active at the given world time, or null if no schedule. */
     public ScheduleEntry activeEntry(long worldTime) {
@@ -76,6 +80,8 @@ public class NpcData {
         if (home != null) o.add("home", Json.locationJson(home));
         if (work != null) o.add("work", Json.locationJson(work));
         if (lastLocation != null) o.add("lastLocation", Json.locationJson(lastLocation));
+        o.addProperty("dead", dead);
+        if (diedAt != null) o.addProperty("diedAt", diedAt);
         JsonArray sched = new JsonArray();
         for (ScheduleEntry e : schedule) sched.add(e.toJson());
         o.add("schedule", sched);
@@ -95,6 +101,8 @@ public class NpcData {
         d.home = locFrom(o.get("home"));
         d.work = locFrom(o.get("work"));
         d.lastLocation = locFrom(o.get("lastLocation"));
+        d.dead = Json.optBool(o, "dead", false);
+        d.diedAt = Json.optString(o, "diedAt", null);
         if (o.has("schedule")) {
             for (JsonElement e : o.getAsJsonArray("schedule")) {
                 d.schedule.add(ScheduleEntry.fromJson(e.getAsJsonObject()));

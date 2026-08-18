@@ -168,6 +168,11 @@ pt("npc_update", "Update an NPC's name, role, home, work, schedule, or look. Cha
   schedule: z.array(scheduleEntry).optional(),
 });
 pt("npc_remove", "Remove an NPC permanently.", { id: z.string() });
+pt("npc_revive", "Bring a dead NPC back to life at a location (defaults to where they died / their home). Dead NPCs never auto-respawn, so this is the only way back.", {
+  id: z.string(),
+  x: z.number().optional(), y: z.number().optional(), z: z.number().optional(),
+  world: z.string().optional(),
+});
 pt("npc_list", "List all NPCs with their roles, places, schedules, and whether they are alive.", {});
 pt("npc_get", "Full record of one NPC.", { id: z.string() });
 pt("npc_say", "Make an NPC speak. Nearby players see 'Name: text' in chat and the NPC turns to face the closest player. Use this for dialogue when a player interacts with an NPC.", {

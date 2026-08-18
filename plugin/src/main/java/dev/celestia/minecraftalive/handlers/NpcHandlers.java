@@ -34,6 +34,7 @@ public class NpcHandlers {
         d.register("npc_get", this::get);
         d.register("npc_say", this::say);
         d.register("npc_move_to", this::moveTo);
+        d.register("npc_revive", this::revive);
     }
 
     private NpcData require(JsonObject args) {
@@ -159,6 +160,22 @@ public class NpcHandlers {
         JsonObject out = new JsonObject();
         out.addProperty("playersHeard", heard);
         return out;
+    }
+
+    private JsonObject revive(JsonObject args) {
+        NpcData data = require(args);
+        Location at;
+        if (args.has("x") && args.has("y") && args.has("z")) {
+            at = Json.location(args);
+        } else {
+            at = data.lastLocation != null ? data.lastLocation
+                    : data.home != null ? data.home : data.work;
+            if (at == null) throw new IllegalStateException("NPC has no known location to revive at");
+            at = at.clone();
+        }
+        npcs.revive(data, at);
+        npcs.save();
+        return npcs.toJson(data);
     }
 
     private JsonObject moveTo(JsonObject args) {

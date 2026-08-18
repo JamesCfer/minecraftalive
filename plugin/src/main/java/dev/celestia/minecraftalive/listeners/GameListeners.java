@@ -117,10 +117,17 @@ public class GameListeners implements Listener {
     public void onEntityDeath(EntityDeathEvent event) {
         NpcData npc = npcs.byEntity(event.getEntity());
         if (npc == null) return;
+        npcs.markDead(npc);
+        event.getDrops().clear();
+        event.getDrops().add(npcs.headOf(npc));
+
         JsonObject data = new JsonObject();
         data.addProperty("npcId", npc.id);
         data.addProperty("npcName", npc.name);
         data.add("location", Json.locationJson(event.getEntity().getLocation()));
+        data.addProperty("dead", true);
+        Player killer = event.getEntity().getKiller();
+        if (killer != null) data.addProperty("killer", killer.getName());
         bridge.broadcastEvent("npc_death", data);
     }
 
