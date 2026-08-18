@@ -14,6 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -82,6 +83,21 @@ public class GameListeners implements Listener {
         data.addProperty("npcName", npc.name);
         data.addProperty("npcRole", npc.role);
         bridge.broadcastEvent("npc_interact", data);
+    }
+
+    /**
+     * NPCs walk their routines all day unattended; terrain mishaps should not quietly
+     * kill the cast. Deliberate harm from players and mobs still lands.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onNpcEnvironmentalDamage(EntityDamageEvent event) {
+        if (event instanceof EntityDamageByEntityEvent) return;
+        if (npcs.byEntity(event.getEntity()) == null) return;
+        switch (event.getCause()) {
+            case FALL, SUFFOCATION, DROWNING, CRAMMING, FLY_INTO_WALL, CONTACT, HOT_FLOOR, VOID ->
+                    event.setCancelled(true);
+            default -> { }
+        }
     }
 
     @EventHandler

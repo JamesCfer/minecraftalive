@@ -290,8 +290,7 @@ public class NpcManager {
             if (dist < 0.7) { cancelWalk(id); return; }
             Location next = cur.clone().add(dx / dist * step, 0, dz / dist * step);
             // step up one block or settle down up to three, staying on solid ground
-            Block feet = next.getBlock();
-            if (!feet.isPassable()) {
+            if (!next.getBlock().isPassable()) {
                 next.add(0, 1, 0);
                 if (!next.getBlock().isPassable()) { cancelWalk(id); return; } // wall
             } else {
@@ -301,7 +300,11 @@ public class NpcManager {
                     next.add(0, -1, 0);
                     drops++;
                 }
+                // a drop deeper than we can step down is a cliff: stay put rather than walk off it
+                if (next.clone().add(0, -1, 0).getBlock().isPassable()) { cancelWalk(id); return; }
             }
+            // never step into a space too short to stand in (suffocation)
+            if (!next.clone().add(0, 1, 0).getBlock().isPassable()) { cancelWalk(id); return; }
             next.setDirection(new Vector(dx, 0, dz));
             entity.teleport(next);
         }, 1L, 1L);
