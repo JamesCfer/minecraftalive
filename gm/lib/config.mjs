@@ -55,6 +55,11 @@ export function loadConfig(env = process.env) {
       .map((s) => s.trim())
       .filter(Boolean),
     model: env.GM_MODEL || "claude-haiku-4-5-20251001",
+    fastPath: bool01("GM_FAST_PATH", true),
+    fastPathMaxTokens: num("GM_FAST_PATH_MAX_TOKENS", 800),
+    fastPathTimeoutMs: num("GM_FAST_PATH_TIMEOUT_MS", 20000),
+    anthropicBaseUrl: env.ANTHROPIC_BASE_URL || "https://api.anthropic.com",
+    anthropicApiKey: env.ANTHROPIC_API_KEY || "",
     enabled: bool01("GM_ENABLED", true),
     dryRun: bool01("GM_DRY_RUN", false),
     loreDir: env.GM_LORE_DIR || path.join(GM_ROOT, "lore"),

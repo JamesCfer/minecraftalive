@@ -14,6 +14,7 @@
 // Exits non-zero on any failure.
 
 import { spawn } from "node:child_process";
+import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -181,6 +182,73 @@ async function main() {
   assert(gm3.child.exitCode === null, "gm process is still running after repeated connect failures");
 
   gm3.child.kill();
+
+  console.log("\n5. Conversation fast path answers through npc_say in one API call");
+  // A fake Anthropic Messages API that always answers as Poppy.
+  const apiPort = 8802;
+  let apiCalls = 0;
+  const fakeApi = http.createServer((req, res) => {
+    let body = "";
+    req.on("data", (d) => { body += d; });
+    req.on("end", () => {
+      apiCalls += 1;
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            lines: [{ npcId: "poppy-wayfinder", text: "Welcome, traveler! Hobble is east, follow the sun downhill." }],
+            remember: null,
+          }),
+        }],
+        usage: { input_tokens: 120, output_tokens: 25 },
+      }));
+    });
+  });
+  await new Promise((resolve) => fakeApi.listen(apiPort, resolve));
+
+  const port3 = 8803;
+  const bridge4 = spawnNode([path.join(GM_DIR, "test", "mock-bridge.mjs")], {
+    MOCK_BRIDGE_PORT: String(port3),
+    MOCK_BRIDGE_TOKEN: "test-token",
+    MOCK_BRIDGE_SCRIPT: "conversation",
+  });
+  await wait(300);
+
+  const gm4 = spawnNode([path.join(GM_DIR, "index.mjs")], {
+    MCALIVE_URL: `ws://127.0.0.1:${port3}`,
+    MCALIVE_TOKEN: "test-token",
+    GM_DEBOUNCE_MS: "300",
+    GM_DRY_RUN: "0",
+    GM_FAST_PATH: "1",
+    GM_ENABLED: "1",
+    GM_LORE_REFRESH_MS: "600000",
+    GM_STATE_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "gm-usage-")),
+    ANTHROPIC_BASE_URL: `http://127.0.0.1:${apiPort}`,
+    ANTHROPIC_API_KEY: "test-key",
+  });
+
+  const fastDone = await waitFor(gm4.logs, (l) => l.msg === "turn_complete_fast", 8000);
+  assert(fastDone, "fast path completed a conversational turn");
+  const fastLog = gm4.logs.find((l) => l.msg === "turn_complete_fast");
+  if (fastLog) {
+    assert(fastLog.linesSpoken === 1, `fast path spoke exactly one line (got ${fastLog.linesSpoken})`);
+    assert(fastLog.totalTokens === 145, `fast path reported API token usage (got ${fastLog.totalTokens})`);
+  }
+  const said = await waitFor(bridge4.logs, (l) => l.msg === "npc_say_received", 2000);
+  assert(said, "bridge received an npc_say for the reply");
+  const sayLog = bridge4.logs.find((l) => l.msg === "npc_say_received");
+  if (sayLog) {
+    assert(sayLog.id === "poppy-wayfinder", `npc_say targeted the addressed NPC (got ${sayLog.id})`);
+    assert(typeof sayLog.text === "string" && sayLog.text.includes("Welcome"), "npc_say carried the model's line");
+  }
+  assert(apiCalls === 1, `the whole conversational batch cost exactly one API call (got ${apiCalls})`);
+  const noSdkTurn = !gm4.logs.some((l) => l.msg === "fast_path_declined" || l.msg === "fast_path_failed");
+  assert(noSdkTurn, "fast path neither declined nor failed (no fallback to a full agent turn)");
+
+  gm4.child.kill();
+  bridge4.child.kill();
+  fakeApi.close();
 
   await wait(200);
 

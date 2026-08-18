@@ -24,6 +24,30 @@ plugin bridge (ws://.../8765)
     @anthropic-ai/claude-agent-sdk
 ```
 
+## The conversation fast path
+
+A full agent turn spawns a Claude Code subprocess and makes 4–7 sequential
+tool-call round-trips (`npc_list` → `npc_get` → `story_get` → `npc_say` →
+wrap-up), which lands at 20–60 seconds — fine for ambient storytelling,
+hopeless for a player standing in front of an NPC waiting for an answer.
+
+So batches that are *purely conversational* (only `player_chat` /
+`npc_interact` events, addressed at a living NPC — right-clicked, or named
+in chat) skip the Agent SDK entirely. The GM pre-loads the same context
+(the addressed NPCs' records, story memory, a rolling log of recent
+dialogue) into a single prompt, makes **one** direct Messages API call, and
+delivers the reply via `npc_say` over its own bridge command connection
+(`lib/bridge-commands.mjs` — same `{id, cmd, args}` protocol as
+`mcp/server.mjs`, no game logic reimplemented). Typical reply latency is
+the debounce window plus one model round-trip: **3–5 seconds**.
+
+The fast path can also persist durable facts (a promise made, a name
+learned) via `story_set`, and it falls back to a full agent turn whenever
+it can't confidently handle a batch (no NPC addressed, mixed event types,
+bridge/API errors). All guardrails below (budget, rate limit, kill switch)
+apply to fast-path turns exactly as to full turns. Disable it with
+`GM_FAST_PATH=0`.
+
 ## Why event-driven, not polling
 
 Idle costs zero tokens. The service only starts an agent turn when
@@ -150,6 +174,9 @@ asserts:
   entirely while still connecting and logging events
 - the denied tools are absent from the allowlist (present, fully
   namespaced, in the deny-list) while storytelling tools are not
+- a purely conversational batch (right-click + "Hey Poppy") is answered by
+  the fast path in exactly one API call (against a fake local Messages API)
+  and lands as an `npc_say` on the bridge
 
 It exits non-zero if any assertion fails.
 
@@ -176,6 +203,10 @@ GM_DRY_RUN=1 npm start
 | `GM_MAX_TURNS_PER_MIN` | `6` | Max agent turns started per rolling 60s window |
 | `GM_DENIED_TOOLS` | `run_command,set_time,fill_region` | Comma-separated bare tool names to deny |
 | `GM_MODEL` | `claude-haiku-4-5-20251001` | Model used for ambient turns |
+| `GM_FAST_PATH` | `1` | `0` disables the conversation fast path (everything goes through full agent turns) |
+| `GM_FAST_PATH_MAX_TOKENS` | `800` | `max_tokens` for the single fast-path API call |
+| `GM_FAST_PATH_TIMEOUT_MS` | `20000` | Abort the fast-path API call after this long (falls back to a full turn) |
+| `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | API base URL for the fast path (the smoke test points this at a fake) |
 | `GM_ENABLED` | `1` | Set to `0` as a kill switch (equivalent to the `gm/DISABLED` file) |
 | `GM_DRY_RUN` | `0` | `1` = log the prompt/system prompt instead of calling the Anthropic API |
 | `GM_LORE_DIR` | `gm/lore` | Where lore `.md` files are read from |
@@ -197,6 +228,10 @@ GM_DRY_RUN=1 npm start
   concurrently, queue what arrives mid-turn" logic.
 - `lib/agent-turn.mjs` — builds the prompt and calls the Claude Agent SDK
   (or logs it and returns early under `GM_DRY_RUN`).
+- `lib/fast-path.mjs` — the conversation fast path: one direct Messages API
+  call for purely conversational batches (see above).
+- `lib/bridge-commands.mjs` — the fast path's own command connection to the
+  plugin bridge (`npc_list`/`story_get`/`npc_say`/`story_set`).
 - `lib/usage-tracker.mjs` — daily token budget, persisted to
   `gm/state/usage.json`.
 - `lib/rate-limiter.mjs` — sliding-window turns-per-minute limiter.

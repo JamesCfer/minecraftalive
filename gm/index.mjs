@@ -16,8 +16,10 @@ import { loadLore, watchLore } from "./lib/lore.mjs";
 import { UsageTracker } from "./lib/usage-tracker.mjs";
 import { RateLimiter } from "./lib/rate-limiter.mjs";
 import { BridgeEventClient } from "./lib/bridge-events.mjs";
+import { BridgeCommandClient } from "./lib/bridge-commands.mjs";
 import { EventScheduler } from "./lib/event-scheduler.mjs";
 import { runAgentTurn } from "./lib/agent-turn.mjs";
+import { isFastPathCandidate, runFastPath } from "./lib/fast-path.mjs";
 
 export async function main(env = process.env) {
   const config = loadConfig(env);
@@ -30,6 +32,7 @@ export async function main(env = process.env) {
     dailyTokenBudget: config.dailyTokenBudget,
     maxTurnsPerMin: config.maxTurnsPerMin,
     deniedTools: config.deniedTools,
+    fastPath: config.fastPath,
     mcaliveUrl: config.mcaliveUrl,
   });
 
@@ -43,6 +46,11 @@ export async function main(env = process.env) {
   });
 
   const onlinePlayers = new Set();
+  // Lazy command connection + rolling dialogue log for the conversation
+  // fast path. The log only survives as long as this process, but the fast
+  // path can also persist durable facts via story_set.
+  const commandBridge = new BridgeCommandClient({ url: config.mcaliveUrl, token: config.mcaliveToken });
+  const dialogueMemory = [];
 
   function isKillSwitchActive() {
     if (!config.enabled) return true;
@@ -80,6 +88,22 @@ export async function main(env = process.env) {
       events: batch.map((e) => e.event),
     });
 
+    if (config.fastPath && !config.dryRun && isFastPathCandidate(batch)) {
+      try {
+        const fast = await runFastPath({
+          batch, config, bridge: commandBridge, loreText: lore.text, memory: dialogueMemory,
+        });
+        if (fast.handled) {
+          if (fast.totalTokens > 0) await usage.addTokens(fast.totalTokens);
+          return;
+        }
+        log.info("fast_path_declined", { reason: fast.reason });
+      } catch (e) {
+        log.warn("fast_path_failed", { error: String(e && e.stack || e) });
+      }
+      // fall through to a full agent turn
+    }
+
     const result = await runAgentTurn({ batch, systemPrompt: lore.text, config });
     if (result.totalTokens > 0) {
       await usage.addTokens(result.totalTokens);
@@ -114,6 +138,7 @@ export async function main(env = process.env) {
     bridge,
     stop() {
       bridge.stop();
+      commandBridge.close();
       loreWatch.stop();
     },
   };
