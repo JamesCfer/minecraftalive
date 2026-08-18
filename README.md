@@ -14,14 +14,16 @@ mcp/server.mjs  ── WebSocket (token auth) ──►  MinecraftAlive plugin  
 
 ## Parts
 
-- **`plugin/`** — Paper 1.21 plugin. Built jar: `plugin/target/MinecraftAlive-0.1.0.jar`. Embeds a WebSocket server (default `ws://127.0.0.1:8765`) and runs NPC daily routines, persistence, and event forwarding.
+- **`plugin/`** — Paper 1.21 plugin. Built jar: `plugin/target/MinecraftAlive.jar`. Embeds a WebSocket server (default `ws://127.0.0.1:8765`) and runs NPC daily routines, persistence, and event forwarding.
 - **`mcp/`** — Node MCP server (stdio) exposing 29 game-master tools that talk to the plugin.
 
 ## Setup
 
 ### 1. Install the plugin
 
-Drop `plugin/target/MinecraftAlive-0.1.0.jar` into your Paper 1.21.x server's `plugins/` folder and start the server once. Then edit `plugins/MinecraftAlive/config.yml`:
+Download `MinecraftAlive.jar` from the [latest release](https://github.com/JamesCfer/minecraftalive/releases/latest), drop it into your Paper server's `plugins/` folder, and start the server once.
+
+**Self-updating:** on every startup the plugin checks GitHub Releases; a newer jar is downloaded to `plugins/update/` and applied automatically on the next restart — you never copy files again. Configure via `auto-update.enabled` / `auto-update.github-repo` in the config. Then edit `plugins/MinecraftAlive/config.yml`:
 
 ```yaml
 bridge:
