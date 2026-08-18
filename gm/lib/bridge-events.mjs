@@ -45,9 +45,13 @@ export class BridgeEventClient {
     if (this.stopped) return;
     const delay = Math.min(this.maxMs, this.baseMs * 2 ** this.attempt);
     this.attempt += 1;
-    log.warn("bridge_reconnect_scheduled", { delayMs: delay, url: this.url });
+    log.warn("bridge_reconnect_scheduled", { attempt: this.attempt, delayMs: delay, url: this.url });
+    // Intentionally NOT unref'd: this timer is what keeps the process alive
+    // while the bridge is unreachable. Unref'ing it lets the event loop
+    // drain to empty (nothing else is pending once a connect attempt fails
+    // synchronously/immediately) and the process exits with code 0 instead
+    // of retrying.
     this._reconnectTimer = setTimeout(() => this._connect(), delay);
-    if (typeof this._reconnectTimer.unref === "function") this._reconnectTimer.unref();
   }
 
   _connect() {

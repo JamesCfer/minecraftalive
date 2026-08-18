@@ -160,6 +160,28 @@ async function main() {
   gm2.child.kill();
   bridge2.child.kill();
 
+  console.log("\n4. Connect failure keeps retrying instead of exiting");
+  const deadPort = 8801; // nothing listening here
+  const gm3 = spawnNode([path.join(GM_DIR, "index.mjs")], {
+    MCALIVE_URL: `ws://127.0.0.1:${deadPort}`,
+    MCALIVE_TOKEN: "test-token",
+    GM_DEBOUNCE_MS: "300",
+    GM_DRY_RUN: "1",
+    GM_ENABLED: "1",
+    GM_LORE_REFRESH_MS: "600000",
+    GM_STATE_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "gm-usage-")),
+  });
+
+  const sawTwoRetries = await waitFor(
+    gm3.logs,
+    () => gm3.logs.filter((l) => l.msg === "bridge_reconnect_scheduled").length >= 2,
+    3500
+  );
+  assert(sawTwoRetries, "at least 2 reconnect attempts were logged within 3.5s");
+  assert(gm3.child.exitCode === null, "gm process is still running after repeated connect failures");
+
+  gm3.child.kill();
+
   await wait(200);
 
   console.log(`\n${failures === 0 ? "ALL CHECKS PASSED" : failures + " CHECK(S) FAILED"}`);
