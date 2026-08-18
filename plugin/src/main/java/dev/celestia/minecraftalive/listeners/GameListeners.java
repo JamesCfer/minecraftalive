@@ -19,6 +19,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
 /** Forwards the interesting things happening in the world to the game master. */
@@ -35,6 +36,13 @@ public class GameListeners implements Listener {
         this.npcs = npcs;
         this.bridge = bridge;
         this.story = story;
+    }
+
+    @EventHandler
+    public void onEntitiesLoad(EntitiesLoadEvent event) {
+        // adopt or delete NPC-tagged entities as their chunks stream in, so
+        // respawn logic can never leave duplicates behind
+        npcs.sweepEntities(event.getEntities());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

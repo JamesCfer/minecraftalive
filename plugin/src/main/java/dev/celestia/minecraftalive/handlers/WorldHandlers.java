@@ -32,6 +32,21 @@ public class WorldHandlers {
         d.register("set_time", this::setTime);
         d.register("set_weather", this::setWeather);
         d.register("spawn_entity", this::spawnEntity);
+        d.register("remove_entity", this::removeEntity);
+    }
+
+    private JsonObject removeEntity(JsonObject args) {
+        java.util.UUID uuid;
+        try {
+            uuid = java.util.UUID.fromString(Json.reqString(args, "uuid"));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("invalid uuid");
+        }
+        Entity entity = Bukkit.getEntity(uuid);
+        if (entity == null) throw new IllegalArgumentException("no loaded entity with uuid " + uuid);
+        if (entity instanceof org.bukkit.entity.Player) throw new IllegalArgumentException("cannot remove players");
+        entity.remove();
+        return null;
     }
 
     private JsonObject serverInfo(JsonObject args) {

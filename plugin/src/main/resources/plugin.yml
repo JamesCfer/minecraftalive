@@ -1,7 +1,7 @@
 name: MinecraftAlive
 version: '${project.version}'
 main: dev.celestia.minecraftalive.MinecraftAlivePlugin
-api-version: '1.21'
+api-version: '26.2'
 description: Lets Claude act as a living game master - controlling NPCs, world, and story via an MCP bridge.
 author: Celestia
 commands:

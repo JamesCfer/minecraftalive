@@ -134,6 +134,7 @@ pt("fill_region", "Fill a cuboid region with a material (capped volume). Set hol
 pt("set_time", "Set world time: 0=dawn, 6000=noon, 13000=dusk, 18000=midnight.", { time: z.number(), world: z.string().optional() });
 pt("set_weather", "Set weather to clear, rain, or thunder.", { weather: z.enum(["clear", "rain", "thunder"]), world: z.string().optional() });
 pt("spawn_entity", "Spawn a plain (non-NPC) entity, e.g. ZOMBIE, SHEEP, IRON_GOLEM.", { ...pos, type: z.string() });
+pt("remove_entity", "Remove a loaded entity by uuid (from spawn_entity or npc records). Cannot remove players.", { uuid: z.string() });
 
 // --- NPCs ---
 const scheduleEntry = z.object({
@@ -147,17 +148,21 @@ pt("npc_spawn",
     id: z.string().describe("unique short id, e.g. 'mara-baker'"),
     name: z.string().describe("display name, e.g. 'Mara the Baker'"),
     ...pos,
-    entityType: z.string().optional().describe("default VILLAGER"),
-    profession: z.string().optional().describe("villager profession: farmer, librarian, weaponsmith..."),
+    entityType: z.string().optional().describe("default MANNEQUIN (player-style body); or VILLAGER, or any living entity type"),
+    skin: z.string().optional().describe("Minecraft username whose skin a MANNEQUIN NPC wears, e.g. 'jeb_'"),
+    profession: z.string().optional().describe("VILLAGER NPCs only - villager profession: farmer, librarian, weaponsmith..."),
     role: z.string().optional().describe("character sheet: personality, backstory, goals, secrets"),
     home: posObj.optional(),
     work: posObj.optional(),
     schedule: z.array(scheduleEntry).optional(),
   });
-pt("npc_update", "Update an NPC's name, role, home, work, or schedule.", {
+pt("npc_update", "Update an NPC's name, role, home, work, schedule, or look. Changing entityType, skin, or profession respawns the backing entity in place (use this to migrate a VILLAGER NPC to a player-style MANNEQUIN).", {
   id: z.string(),
   name: z.string().optional(),
   role: z.string().optional(),
+  entityType: z.string().optional().describe("e.g. MANNEQUIN for a player-style body"),
+  skin: z.string().optional().describe("Minecraft username whose skin a MANNEQUIN wears"),
+  profession: z.string().optional(),
   home: posObj.optional(),
   work: posObj.optional(),
   schedule: z.array(scheduleEntry).optional(),

@@ -46,6 +46,12 @@ public final class MinecraftAlivePlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new GameListeners(this, npcManager, bridge, storyHandlers), this);
 
+        // clean up any duplicate/orphaned NPC entities once the world has settled
+        getServer().getScheduler().runTaskLater(this, () -> {
+            int removed = npcManager.sweepAllLoaded();
+            if (removed > 0) getLogger().info("Removed " + removed + " duplicate/orphaned NPC entities");
+        }, 60L);
+
         // NPC routine tick, every 5 seconds
         getServer().getScheduler().runTaskTimer(this, () -> npcManager.tickRoutines(), 100L, 100L);
         // Autosave NPCs + story every 5 minutes

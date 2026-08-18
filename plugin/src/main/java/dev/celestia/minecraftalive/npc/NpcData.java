@@ -42,8 +42,9 @@ public class NpcData {
 
     public String id;
     public String name;
-    public String entityType = "VILLAGER";
+    public String entityType = "MANNEQUIN";
     public String profession;   // villager profession key, optional
+    public String skin;         // Minecraft username whose skin a mannequin NPC wears
     public String role = "";    // free-text character sheet for the game master
     public UUID entityUuid;
     public Location home;
@@ -51,6 +52,7 @@ public class NpcData {
     public Location lastLocation;
     public List<ScheduleEntry> schedule = new ArrayList<>();
     public transient long manualOverrideUntilMs = 0;
+    public transient long lastRespawnMs = 0;
 
     /** Schedule entry active at the given world time, or null if no schedule. */
     public ScheduleEntry activeEntry(long worldTime) {
@@ -68,6 +70,7 @@ public class NpcData {
         o.addProperty("name", name);
         o.addProperty("entityType", entityType);
         if (profession != null) o.addProperty("profession", profession);
+        if (skin != null) o.addProperty("skin", skin);
         o.addProperty("role", role);
         if (entityUuid != null) o.addProperty("entityUuid", entityUuid.toString());
         if (home != null) o.add("home", Json.locationJson(home));
@@ -83,8 +86,9 @@ public class NpcData {
         NpcData d = new NpcData();
         d.id = o.get("id").getAsString();
         d.name = o.get("name").getAsString();
-        d.entityType = Json.optString(o, "entityType", "VILLAGER");
+        d.entityType = Json.optString(o, "entityType", "MANNEQUIN");
         d.profession = Json.optString(o, "profession", null);
+        d.skin = Json.optString(o, "skin", null);
         d.role = Json.optString(o, "role", "");
         String uuid = Json.optString(o, "entityUuid", null);
         if (uuid != null) d.entityUuid = UUID.fromString(uuid);

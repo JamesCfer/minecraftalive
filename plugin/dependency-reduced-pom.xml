@@ -4,7 +4,7 @@
   <groupId>dev.celestia</groupId>
   <artifactId>minecraftalive</artifactId>
   <name>MinecraftAlive</name>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
   <build>
     <resources>
       <resource>
@@ -56,7 +56,7 @@
     <dependency>
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
-      <version>1.21.4-R0.1-SNAPSHOT</version>
+      <version>26.2.build.112-stable</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>

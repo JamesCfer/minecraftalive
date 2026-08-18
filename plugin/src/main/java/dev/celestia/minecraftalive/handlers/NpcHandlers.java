@@ -48,8 +48,9 @@ public class NpcHandlers {
         NpcData data = new NpcData();
         data.id = id;
         data.name = Json.reqString(args, "name");
-        data.entityType = Json.optString(args, "entityType", "VILLAGER");
+        data.entityType = Json.optString(args, "entityType", "MANNEQUIN");
         data.profession = Json.optString(args, "profession", null);
+        data.skin = Json.optString(args, "skin", null);
         data.role = Json.optString(args, "role", "");
         applyPlaces(data, args);
         Location loc = Json.location(args);
@@ -84,6 +85,21 @@ public class NpcHandlers {
             if (e != null) e.customName(Component.text(data.name, NamedTextColor.GOLD));
         }
         if (args.has("role")) data.role = Json.optString(args, "role", "");
+        boolean respawn = false;
+        if (args.has("entityType")) {
+            String type = Json.reqString(args, "entityType");
+            respawn = !type.equalsIgnoreCase(data.entityType);
+            data.entityType = type;
+        }
+        if (args.has("profession")) {
+            data.profession = Json.optString(args, "profession", null);
+            respawn = true;
+        }
+        if (args.has("skin")) {
+            data.skin = Json.optString(args, "skin", null);
+            respawn = true;
+        }
+        if (respawn) npcs.respawn(data); // swap the backing entity to match the new look
         applyPlaces(data, args);
         applySchedule(data, args);
         npcs.save();
@@ -127,7 +143,9 @@ public class NpcHandlers {
                 heard++;
             }
         }
-        entity.getWorld().playSound(entity.getLocation(), "entity.villager.ambient", 1.0f, 1.0f);
+        if (entity instanceof org.bukkit.entity.Villager) {
+            entity.getWorld().playSound(entity.getLocation(), "entity.villager.ambient", 1.0f, 1.0f);
+        }
         // face the nearest player while speaking
         Player nearest = null;
         double best = Double.MAX_VALUE;
@@ -135,8 +153,8 @@ public class NpcHandlers {
             double d2 = p.getLocation().distanceSquared(entity.getLocation());
             if (d2 < best) { best = d2; nearest = p; }
         }
-        if (nearest != null && entity instanceof Mob mob && best <= radius * radius) {
-            mob.lookAt(nearest);
+        if (nearest != null && best <= radius * radius) {
+            npcs.face(entity, nearest.getLocation());
         }
         JsonObject out = new JsonObject();
         out.addProperty("playersHeard", heard);
@@ -145,13 +163,11 @@ public class NpcHandlers {
 
     private JsonObject moveTo(JsonObject args) {
         NpcData data = require(args);
-        Entity entity = npcs.resolveEntity(data);
-        if (!(entity instanceof Mob mob)) throw new IllegalStateException("NPC entity is not a pathfinding mob");
         Location target = Json.location(args);
         double speed = Json.optDouble(args, "speed", 1.0);
         // pause the daily routine so the walk isn't overridden
         data.manualOverrideUntilMs = System.currentTimeMillis() + (long) (Json.optDouble(args, "holdSeconds", 60) * 1000);
-        boolean started = mob.getPathfinder().moveTo(target, speed);
+        boolean started = npcs.walkTo(data, target, speed);
         JsonObject out = new JsonObject();
         out.addProperty("pathStarted", started);
         return out;
